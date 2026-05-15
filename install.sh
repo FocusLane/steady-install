@@ -185,6 +185,17 @@ if pgrep -f "${INSTALL_PATH}/Contents/MacOS/${APP_NAME}" >/dev/null 2>&1; then
     sleep 1
 fi
 
+# The Python daemon child of Steady outlives its parent if launchctl bootout
+# or pkill gives the Swift app only a short SIGTERM window — DaemonRunner.stop()
+# runs through willTerminateNotification, which is best-effort. Sweep for it
+# explicitly so we don't unzip a fresh bundle on top of a daemon still writing
+# to ~/.steady/steady.db.
+if pgrep -f "${INSTALL_PATH}/Contents/Resources/steadyd.py" >/dev/null 2>&1; then
+    say "Stopping orphaned Steady daemon."
+    pkill -f "${INSTALL_PATH}/Contents/Resources/steadyd.py" 2>/dev/null || true
+    sleep 1
+fi
+
 if [[ -e "$INSTALL_PATH" ]]; then
     say "Removing existing ${INSTALL_PATH}."
     rm -rf "$INSTALL_PATH"
