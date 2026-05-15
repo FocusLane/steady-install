@@ -114,8 +114,13 @@ fi
 
 # Parse with python3 — we already require it for the daemon, so it's
 # guaranteed to be present at this point.
+#
+# Source via `-c` instead of a here-doc: when both a here-doc and a pipe
+# feed a command, the here-doc wins on stdin. `python3 -` would then read
+# its *source* from the JSON we wanted to parse, and `sys.stdin.read()`
+# would come back empty. `-c` keeps stdin free for the JSON pipe.
 parse_release() {
-    /usr/bin/python3 - "$1" <<'PY'
+    /usr/bin/python3 -c '
 import json, sys
 data = json.loads(sys.stdin.read())
 field = sys.argv[1]
@@ -131,7 +136,7 @@ elif field == "sha_url":
         if a["name"].endswith(".sha256"):
             print(a["browser_download_url"])
             break
-PY
+' "$1"
 }
 
 TAG="$(printf '%s' "$RELEASE_JSON" | parse_release tag_name)"
